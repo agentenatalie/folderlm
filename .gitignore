@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code local settings
+.claude/
+
+# Environment
+.env
+.env.*
+
+# Node (if ever added)
+node_modules/
+npm-debug.log*
+
+# Build artifacts
+dist/
+build/
+*.zip
+*.crx
+*.pem

@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FolderLM</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* CSS variables (dark mode default) */
+    body {
+      --sp-bg-primary: #1e1e1e;
+      --sp-bg-secondary: #252525;
+      --sp-bg-tertiary: #2a2a2a;
+      --sp-bg-hover: #333;
+      --sp-text-primary: #e0e0e0;
+      --sp-text-secondary: #aaa;
+      --sp-text-muted: #888;
+      --sp-text-dim: #666;
+      --sp-border-color: #333;
+      --sp-border-light: #444;
+      --sp-accent-color: #8ab4f8;
+      --sp-danger-color: #f44336;
+      --sp-success-bg: rgba(76, 175, 80, 0.2);
+      --sp-success-color: #81c784;
+      --sp-error-bg: rgba(244, 67, 54, 0.2);
+      --sp-error-color: #e57373;
+      --sp-info-bg: rgba(33, 150, 243, 0.2);
+      --sp-info-color: #64b5f6;
+    }
+
+    /* Light mode */
+    body.light-theme {
+      --sp-bg-primary: #ffffff;
+      --sp-bg-secondary: #f8f9fa;
+      --sp-bg-tertiary: #f1f3f4;
+      --sp-bg-hover: #e8eaed;
+      --sp-text-primary: #1f1f1f;
+      --sp-text-secondary: #4b4b4b;
+      --sp-text-muted: #7a7a7a;
+      --sp-text-dim: #9a948b;
+      --sp-border-color: #e1dbcf;
+      --sp-border-light: #eee9df;
+      --sp-accent-color: #5c6f82;
+      --sp-danger-color: #b2463c;
+      --sp-success-bg: rgba(96, 142, 96, 0.18);
+      --sp-success-color: #3a6b3a;
+      --sp-error-bg: rgba(178, 70, 60, 0.18);
+      --sp-error-color: #9b3b33;
+      --sp-info-bg: rgba(92, 111, 130, 0.18);
+      --sp-info-color: #445566;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--sp-bg-primary);
+      color: var(--sp-text-primary);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .sp-header {
+      padding: 16px;
+      background: var(--sp-bg-secondary);
+      border-bottom: 1px solid var(--sp-border-color);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sp-header h1 {
+      font-size: 16px;
+      font-weight: 500;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sp-header > svg {
+      color: var(--sp-accent-color);
+    }
+
+    .sp-back-btn {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      border: 1px solid var(--sp-border-light);
+      border-radius: 6px;
+      background: var(--sp-bg-tertiary);
+      color: var(--sp-text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .sp-back-btn:hover {
+      background: var(--sp-bg-hover);
+      color: var(--sp-text-primary);
+    }
+
+    .sp-back-btn.visible {
+      display: flex;
+    }
+
+    /* Content */
+    .sp-content {
+      padding: 16px;
+      padding-bottom: 60px;
+      overflow-y: auto;
+    }
+
+    /* Screens */
+    .sp-screen {
+      display: none;
+    }
+
+    .sp-screen.active {
+      display: block;
+    }
+
+    /* Stats section */
+    .sp-stats {
+      background: var(--sp-bg-secondary);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .sp-stats-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .sp-stats h2 {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--sp-text-secondary);
+    }
+
+    .sp-refresh-btn {
+      background: none;
+      border: 1px solid var(--sp-border-light);
+      border-radius: 4px;
+      padding: 4px 6px;
+      cursor: pointer;
+      color: var(--sp-text-muted);
+      transition: all 0.2s;
+    }
+
+    .sp-refresh-btn:hover {
+      background: var(--sp-bg-hover);
+      border-color: var(--sp-accent-color);
+      color: var(--sp-accent-color);
+    }
+
+    .sp-refresh-btn.loading svg {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .sp-stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .sp-stat-item {
+      text-align: center;
+    }
+
+    .sp-stat-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--sp-accent-color);
+    }
+
+    .sp-stat-label {
+      font-size: 12px;
+      color: var(--sp-text-muted);
+      margin-top: 4px;
+    }
+
+    /* Action buttons */
+    .sp-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sp-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 8px;
+      background: var(--sp-bg-tertiary);
+      color: var(--sp-text-primary);
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+      text-align: left;
+    }
+
+    .sp-action-btn:hover {
+      background: var(--sp-bg-hover);
+    }
+
+    .sp-action-btn svg {
+      color: var(--sp-text-muted);
+      flex-shrink: 0;
+    }
+
+    .sp-action-btn.danger {
+      color: var(--sp-danger-color);
+    }
+
+    .sp-action-btn.danger svg {
+      color: var(--sp-danger-color);
+    }
+
+    /* Messages */
+    .sp-message {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    .sp-message.success {
+      background: var(--sp-success-bg);
+      color: var(--sp-success-color);
+    }
+
+    .sp-message.error {
+      background: var(--sp-error-bg);
+      color: var(--sp-error-color);
+    }
+
+    .sp-message.info {
+      background: var(--sp-info-bg);
+      color: var(--sp-info-color);
+    }
+
+    /* Footer */
+    .sp-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--sp-border-color);
+      text-align: center;
+      font-size: 12px;
+      color: var(--sp-text-dim);
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--sp-bg-primary);
+    }
+
+    /* ========================================
+       Slide Prompt Screen
+       ======================================== */
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--sp-text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .form-group select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--sp-border-color);
+      border-radius: 6px;
+      background: var(--sp-bg-secondary);
+      color: var(--sp-text-primary);
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--sp-accent-color);
+    }
+
+    .tone-description {
+      font-size: 12px;
+      color: var(--sp-text-muted);
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--sp-border-color);
+      margin: 20px 0;
+    }
+
+    /* Section header */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .section-header span {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--sp-text-secondary);
+    }
+
+    .section-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--sp-text-secondary);
+      margin-bottom: 12px;
+    }
+
+    /* Custom color section */
+    .custom-colors-section {
+      background: var(--sp-bg-secondary);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .custom-colors-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .custom-color-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      background: var(--sp-bg-tertiary);
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .color-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid var(--sp-border-color);
+    }
+
+    .color-name {
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .delete-color {
+      background: none;
+      border: none;
+      color: var(--sp-text-muted);
+      cursor: pointer;
+      padding: 0 2px;
+      font-size: 14px;
+    }
+
+    .delete-color:hover {
+      color: var(--sp-danger-color);
+    }
+
+    .empty-colors {
+      font-size: 12px;
+      color: var(--sp-text-dim);
+    }
+
+    .add-color-btn {
+      padding: 4px 10px;
+      border: 1px solid var(--sp-border-light);
+      border-radius: 4px;
+      background: var(--sp-bg-tertiary);
+      color: var(--sp-text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .add-color-btn:hover {
+      background: var(--sp-bg-hover);
+      border-color: var(--sp-accent-color);
+      color: var(--sp-accent-color);
+    }
+
+    .add-color-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      background: var(--sp-bg-tertiary);
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+
+    .add-color-form input {
+      padding: 8px 10px;
+      border: 1px solid var(--sp-border-color);
+      border-radius: 4px;
+      background: var(--sp-bg-primary);
+      color: var(--sp-text-primary);
+      font-size: 13px;
+    }
+
+    .add-color-form input:focus {
+      outline: none;
+      border-color: var(--sp-accent-color);
+    }
+
+    .add-color-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-save-color, .btn-cancel-color {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn-save-color {
+      background: var(--sp-accent-color);
+      color: #fff;
+    }
+
+    .btn-cancel-color {
+      background: var(--sp-bg-hover);
+      color: var(--sp-text-secondary);
+    }
+
+    /* Color selection row */
+    .color-select-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-select-row select {
+      flex: 1;
+    }
+
+    .color-input {
+      width: 100px;
+      padding: 8px 10px;
+      border: 1px solid var(--sp-border-color);
+      border-radius: 4px;
+      background: var(--sp-bg-secondary);
+      color: var(--sp-text-primary);
+      font-size: 12px;
+    }
+
+    .color-input:focus {
+      outline: none;
+      border-color: var(--sp-accent-color);
+    }
+
+    .color-preview {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--sp-border-color);
+      flex-shrink: 0;
+    }
+
+    /* Prompt textarea */
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--sp-border-color);
+      border-radius: 6px;
+      background: var(--sp-bg-secondary);
+      color: var(--sp-text-primary);
+      font-size: 12px;
+      font-family: monospace;
+      line-height: 1.5;
+      resize: vertical;
+      min-height: 200px;
+    }
+
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--sp-accent-color);
+    }
+
+    /* Copy button */
+    .copy-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px 16px;
+      border: 1px solid var(--sp-border-color);
+      border-radius: 6px;
+      background: var(--sp-bg-tertiary);
+      color: var(--sp-text-primary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: var(--sp-bg-hover);
+      border-color: var(--sp-accent-color);
+    }
+
+    .copy-btn.copied {
+      background: var(--sp-success-bg);
+      border-color: var(--sp-success-color);
+      color: var(--sp-success-color);
+    }
+
+    /* Preset section */
+    .preset-section {
+      background: var(--sp-bg-secondary);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .preset-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .preset-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--sp-bg-tertiary);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .preset-item:hover {
+      background: var(--sp-bg-hover);
+    }
+
+    .preset-name {
+      flex: 1;
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .preset-tone {
+      font-size: 11px;
+      color: var(--sp-text-muted);
+      padding: 2px 6px;
+      background: var(--sp-bg-primary);
+      border-radius: 4px;
+    }
+
+    .delete-preset {
+      background: none;
+      border: none;
+      color: var(--sp-text-muted);
+      cursor: pointer;
+      padding: 0 4px;
+      font-size: 16px;
+    }
+
+    .delete-preset:hover {
+      color: var(--sp-danger-color);
+    }
+
+    .empty-presets {
+      font-size: 12px;
+      color: var(--sp-text-dim);
+      text-align: center;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="sp-header">
+    <button class="sp-back-btn" id="btn-back">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+      Back
+    </button>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+    </svg>
+    <h1 id="header-title">FolderLM</h1>
+  </div>
+
+  <div class="sp-content">
+    <div id="sp-message" class="sp-message hidden"></div>
+
+    <!-- Main screen -->
+    <div id="screen-main" class="sp-screen active">
+      <div class="sp-stats">
+        <div class="sp-stats-header">
+          <h2>Stats</h2>
+          <button class="sp-refresh-btn" id="btn-refresh" title="Refresh">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="sp-stats-grid">
+          <div class="sp-stat-item">
+            <div class="sp-stat-value" id="stat-notebooks">-</div>
+            <div class="sp-stat-label">Notebooks</div>
+          </div>
+          <div class="sp-stat-item">
+            <div class="sp-stat-value" id="stat-groups">0</div>
+            <div class="sp-stat-label">Groups</div>
+          </div>
+          <div class="sp-stat-item">
+            <div class="sp-stat-value" id="stat-favorites">0</div>
+            <div class="sp-stat-label">Favorites</div>
+          </div>
+          <div class="sp-stat-item">
+            <div class="sp-stat-value" id="stat-assigned">0</div>
+            <div class="sp-stat-label">Assigned</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sp-actions">
+        <button class="sp-action-btn" id="btn-slide-prompt">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+          Slide Prompt Builder
+        </button>
+
+        <button class="sp-action-btn" id="btn-export">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Export data
+        </button>
+
+        <button class="sp-action-btn" id="btn-import">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          Import data
+        </button>
+        <input type="file" id="import-file" accept=".json" class="hidden">
+
+        <button class="sp-action-btn" id="btn-open-notebooklm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          Open NotebookLM
+        </button>
+
+        <button class="sp-action-btn danger" id="btn-reset">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          Reset all data
+        </button>
+      </div>
+    </div>
+
+    <!-- Slide prompt screen -->
+    <div id="screen-slide" class="sp-screen">
+      <!-- 1) Tone selection -->
+      <div class="form-group tone-section">
+        <label>1. Choose a slide tone</label>
+        <select id="slide-tone">
+          <option value="simple">Simple & Minimal</option>
+          <option value="business">Business & Professional</option>
+          <option value="modern">Modern & Stylish</option>
+          <option value="pop">Pop & Casual</option>
+          <option value="elegant">Elegant & Premium</option>
+          <option value="tech">Tech & Futuristic</option>
+          <option value="natural">Natural & Soft</option>
+          <option value="dynamic">Dynamic & Impactful</option>
+          <option value="creative">Creative & Unique</option>
+          <option value="academic">Academic & Formal</option>
+        </select>
+        <p class="tone-description" id="tone-description"></p>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Custom colors -->
+      <div class="custom-colors-section">
+        <div class="section-header">
+          <span>Saved custom colors</span>
+          <button class="add-color-btn" id="btn-add-color">+ Add</button>
+        </div>
+        <div id="custom-colors-list" class="custom-colors-list"></div>
+        <div id="add-color-form" class="add-color-form hidden">
+          <input type="text" id="new-color-name" placeholder="Name (e.g., Corporate Blue)">
+          <input type="text" id="new-color-code" placeholder="#000000">
+          <div class="add-color-actions">
+            <button class="btn-save-color" id="btn-save-color">Save</button>
+            <button class="btn-cancel-color" id="btn-cancel-color">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="section-label">2. Customize colors and fonts (optional)</p>
+
+      <div class="form-group">
+        <label>Primary color</label>
+        <div class="color-select-row">
+          <select id="main-color">
+            <optgroup label="Dark">
+              <option value="#1d1d1f">Black (#1d1d1f)</option>
+              <option value="#202124">Dark Gray (#202124)</option>
+              <option value="#1d1c1d">Off Black (#1d1c1d)</option>
+              <option value="#2c2c2c">Charcoal (#2c2c2c)</option>
+              <option value="#323130">Gray (#323130)</option>
+              <option value="#161616">Jet Black (#161616)</option>
+            </optgroup>
+            <optgroup label="Blue/Green">
+              <option value="#1e3a5f">Navy (#1e3a5f)</option>
+              <option value="#3d5a45">Forest Green (#3d5a45)</option>
+            </optgroup>
+            <optgroup label="Accent">
+              <option value="#611f69">Deep Purple (#611f69)</option>
+            </optgroup>
+            <option value="custom">Custom...</option>
+          </select>
+          <input type="text" id="main-color-custom" class="color-input hidden" placeholder="#000000">
+          <div id="main-color-preview" class="color-preview"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Accent color</label>
+        <div class="color-select-row">
+          <select id="accent-color">
+            <optgroup label="Blues">
+              <option value="#0071e3">Blue (#0071e3)</option>
+              <option value="#0078d4">Royal Blue (#0078d4)</option>
+              <option value="#1a73e8">Sky Blue (#1a73e8)</option>
+              <option value="#0f62fe">Deep Blue (#0f62fe)</option>
+              <option value="#36c5f0">Light Blue (#36c5f0)</option>
+            </optgroup>
+            <optgroup label="Warm">
+              <option value="#fa0f00">Red (#fa0f00)</option>
+              <option value="#e01e5a">Pink (#e01e5a)</option>
+              <option value="#b8860b">Dark Gold (#b8860b)</option>
+              <option value="#8b4513">Saddle Brown (#8b4513)</option>
+            </optgroup>
+            <optgroup label="Greens">
+              <option value="#a8c686">Sage Green (#a8c686)</option>
+            </optgroup>
+            <option value="custom">Custom...</option>
+          </select>
+          <input type="text" id="accent-color-custom" class="color-input hidden" placeholder="#000000">
+          <div id="accent-color-preview" class="color-preview"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Background color</label>
+        <div class="color-select-row">
+          <select id="bg-color">
+            <optgroup label="Whites">
+              <option value="#ffffff">White (#ffffff)</option>
+              <option value="#f4f4f4">Light Gray (#f4f4f4)</option>
+              <option value="#fafaf5">Natural White (#fafaf5)</option>
+            </optgroup>
+            <optgroup label="Creams">
+              <option value="#fffef5">Ivory (#fffef5)</option>
+              <option value="#fffef8">Cream (#fffef8)</option>
+            </optgroup>
+            <optgroup label="Darks">
+              <option value="#1a1a1a">Dark (#1a1a1a)</option>
+              <option value="#0d1117">Dark Blue (#0d1117)</option>
+            </optgroup>
+            <option value="custom">Custom...</option>
+          </select>
+          <input type="text" id="bg-color-custom" class="color-input hidden" placeholder="#000000">
+          <div id="bg-color-preview" class="color-preview"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Japanese font</label>
+        <select id="jp-font">
+          <optgroup label="Gothic (Readable)">
+            <option value="Hiragino Sans">Hiragino Sans</option>
+            <option value="Yu Gothic">Yu Gothic</option>
+            <option value="Meiryo">Meiryo</option>
+            <option value="Noto Sans JP">Noto Sans JP</option>
+            <option value="Source Han Sans JP">Source Han Sans JP</option>
+            <option value="IBM Plex Sans JP">IBM Plex Sans JP</option>
+            <option value="BIZ UDPGothic">BIZ UDPGothic</option>
+          </optgroup>
+          <optgroup label="Mincho (Formal)">
+            <option value="Yu Mincho">Yu Mincho</option>
+            <option value="Hiragino Mincho">Hiragino Mincho</option>
+            <option value="Noto Serif JP">Noto Serif JP</option>
+            <option value="Source Han Serif JP">Source Han Serif JP</option>
+            <option value="BIZ UDPMincho">BIZ UDPMincho</option>
+          </optgroup>
+          <optgroup label="Rounded (Soft)">
+            <option value="M PLUS Rounded 1c">M PLUS Rounded 1c</option>
+            <option value="Zen Maru Gothic">Zen Maru Gothic</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>English font</label>
+        <select id="en-font">
+          <optgroup label="Sans Serif (Modern)">
+            <option value="Helvetica Neue">Helvetica Neue</option>
+            <option value="Segoe UI">Segoe UI</option>
+            <option value="Roboto">Roboto</option>
+            <option value="IBM Plex Sans">IBM Plex Sans</option>
+            <option value="Source Sans Pro">Source Sans Pro</option>
+            <option value="Lato">Lato</option>
+            <option value="Poppins">Poppins</option>
+            <option value="Open Sans">Open Sans</option>
+            <option value="Arial">Arial</option>
+          </optgroup>
+          <optgroup label="Serif (Formal)">
+            <option value="EB Garamond">EB Garamond</option>
+            <option value="Cormorant Garamond">Cormorant Garamond</option>
+            <option value="Source Serif Pro">Source Serif Pro</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Times New Roman">Times New Roman</option>
+          </optgroup>
+          <optgroup label="Display">
+            <option value="Montserrat">Montserrat</option>
+            <option value="Playfair Display">Playfair Display</option>
+            <option value="Oswald">Oswald</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Generated prompt (editable)</label>
+        <textarea id="generated-prompt" rows="12"></textarea>
+        <button class="copy-btn" id="btn-copy-prompt">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy
+        </button>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Preset save/load -->
+      <div class="preset-section">
+        <div class="section-header">
+          <span>Saved presets</span>
+          <button class="add-color-btn" id="btn-save-preset">+ Save</button>
+        </div>
+        <div id="preset-list" class="preset-list"></div>
+        <div id="save-preset-form" class="add-color-form hidden">
+          <input type="text" id="new-preset-name" placeholder="Preset name (e.g., Internal deck)">
+          <div class="add-color-actions">
+            <button class="btn-save-color" id="btn-confirm-save-preset">Save</button>
+            <button class="btn-cancel-color" id="btn-cancel-save-preset">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sp-footer">
+    <p>FolderLM</p>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>

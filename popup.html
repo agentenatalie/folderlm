@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FolderLM</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* CSS variables (dark mode default) */
+    body {
+      --popup-bg-primary: #1e1e1e;
+      --popup-bg-secondary: #252525;
+      --popup-bg-tertiary: #2a2a2a;
+      --popup-bg-hover: #333;
+      --popup-text-primary: #e0e0e0;
+      --popup-text-secondary: #aaa;
+      --popup-text-muted: #888;
+      --popup-text-dim: #666;
+      --popup-border-color: #333;
+      --popup-border-light: #444;
+      --popup-accent-color: #8ab4f8;
+      --popup-danger-color: #f44336;
+      --popup-success-bg: rgba(76, 175, 80, 0.2);
+      --popup-success-color: #81c784;
+      --popup-error-bg: rgba(244, 67, 54, 0.2);
+      --popup-error-color: #e57373;
+      --popup-info-bg: rgba(33, 150, 243, 0.2);
+      --popup-info-color: #64b5f6;
+      --popup-modal-bg: rgba(0, 0, 0, 0.8);
+    }
+
+    /* Light mode */
+    body.light-theme {
+      --popup-bg-primary: #ffffff;
+      --popup-bg-secondary: #f8f9fa;
+      --popup-bg-tertiary: #f1f3f4;
+      --popup-bg-hover: #e8eaed;
+      --popup-text-primary: #1f1f1f;
+      --popup-text-secondary: #4b4b4b;
+      --popup-text-muted: #7a7a7a;
+      --popup-text-dim: #9a948b;
+      --popup-border-color: #e1dbcf;
+      --popup-border-light: #eee9df;
+      --popup-accent-color: #5c6f82;
+      --popup-danger-color: #b2463c;
+      --popup-success-bg: rgba(96, 142, 96, 0.18);
+      --popup-success-color: #3a6b3a;
+      --popup-error-bg: rgba(178, 70, 60, 0.18);
+      --popup-error-color: #9b3b33;
+      --popup-info-bg: rgba(92, 111, 130, 0.18);
+      --popup-info-color: #445566;
+      --popup-modal-bg: rgba(20, 20, 20, 0.28);
+    }
+
+    body {
+      width: 320px;
+      font-family: 'Segoe UI', 'Roboto', sans-serif;
+      background: var(--popup-bg-primary);
+      color: var(--popup-text-primary);
+    }
+
+    .popup-header {
+      padding: 16px;
+      background: var(--popup-bg-secondary);
+      border-bottom: 1px solid var(--popup-border-color);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .popup-header svg {
+      color: var(--popup-accent-color);
+    }
+
+    .popup-header h1 {
+      font-size: 16px;
+      font-weight: 500;
+      flex: 1;
+    }
+
+    .header-icon-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--popup-border-light);
+      border-radius: 6px;
+      background: var(--popup-bg-tertiary);
+      color: var(--popup-text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .header-icon-btn:hover {
+      background: var(--popup-bg-hover);
+      color: var(--popup-accent-color);
+      border-color: var(--popup-accent-color);
+    }
+
+    .popup-content {
+      padding: 16px;
+    }
+
+    .stats-section {
+      background: var(--popup-bg-secondary);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .stats-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .stats-section h2 {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--popup-text-secondary);
+      margin: 0;
+    }
+
+    .refresh-btn {
+      background: none;
+      border: 1px solid var(--popup-border-light);
+      border-radius: 4px;
+      padding: 4px 6px;
+      cursor: pointer;
+      color: var(--popup-text-muted);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .refresh-btn:hover {
+      background: var(--popup-bg-hover);
+      border-color: var(--popup-accent-color);
+      color: var(--popup-accent-color);
+    }
+
+    .refresh-btn.loading svg {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--popup-accent-color);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--popup-text-muted);
+      margin-top: 4px;
+    }
+
+    .actions-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 8px;
+      background: var(--popup-bg-tertiary);
+      color: var(--popup-text-primary);
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+      text-align: left;
+    }
+
+    .action-btn:hover {
+      background: var(--popup-bg-hover);
+    }
+
+    .action-btn svg {
+      color: var(--popup-text-muted);
+      flex-shrink: 0;
+    }
+
+    .action-btn.danger {
+      color: var(--popup-danger-color);
+    }
+
+    .action-btn.danger svg {
+      color: var(--popup-danger-color);
+    }
+
+    .popup-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--popup-border-color);
+      text-align: center;
+      font-size: 12px;
+      color: var(--popup-text-dim);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .message {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    .message.success {
+      background: var(--popup-success-bg);
+      color: var(--popup-success-color);
+    }
+
+    .message.error {
+      background: var(--popup-error-bg);
+      color: var(--popup-error-color);
+    }
+
+    .message.info {
+      background: var(--popup-info-bg);
+      color: var(--popup-info-color);
+    }
+
+    /* Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--popup-modal-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    .modal-content {
+      background: var(--popup-bg-tertiary);
+      border-radius: 12px;
+      width: 320px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid var(--popup-border-color);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--popup-text-primary);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--popup-text-muted);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: var(--popup-text-primary);
+    }
+
+    .modal-body {
+      padding: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--popup-text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .form-group select,
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--popup-border-light);
+      border-radius: 6px;
+      background: var(--popup-bg-hover);
+      color: var(--popup-text-primary);
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+
+    .form-group select:focus,
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--popup-accent-color);
+    }
+
+    .form-group textarea {
+      resize: none;
+      font-family: monospace;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .color-select-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .color-select-row select {
+      flex: 1;
+    }
+
+    .color-input {
+      width: 80px !important;
+      flex: 0 0 80px;
+    }
+
+    .color-input.hidden {
+      display: none;
+    }
+
+    .color-preview {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      border: 1px solid var(--popup-border-light);
+      flex-shrink: 0;
+    }
+
+    .copy-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      background: var(--popup-accent-color);
+      color: var(--popup-bg-primary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .copy-btn:hover {
+      filter: brightness(1.1);
+    }
+
+    .copy-btn.copied {
+      background: #34a853;
+      color: #fff;
+    }
+
+    /* Tone section */
+    .tone-section {
+      background: var(--popup-bg-hover);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .tone-section label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--popup-accent-color);
+    }
+
+    .tone-description {
+      font-size: 11px;
+      color: var(--popup-text-muted);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    .section-label {
+      font-size: 12px;
+      color: var(--popup-text-muted);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--popup-border-light);
+    }
+
+    /* Custom color section */
+    .custom-colors-section {
+      margin-bottom: 12px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .section-header span {
+      font-size: 12px;
+      color: var(--popup-text-secondary);
+    }
+
+    .add-color-btn {
+      background: none;
+      border: 1px solid var(--popup-border-light);
+      color: var(--popup-accent-color);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .add-color-btn:hover {
+      background: rgba(138, 180, 248, 0.1);
+      border-color: var(--popup-accent-color);
+    }
+
+    .custom-colors-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 20px;
+    }
+
+    .custom-color-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--popup-bg-hover);
+      border: 1px solid var(--popup-border-light);
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-size: 11px;
+      color: var(--popup-text-secondary);
+    }
+
+    .custom-color-item .color-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid var(--popup-border-light);
+    }
+
+    .custom-color-item .color-name {
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .custom-color-item .delete-color {
+      background: none;
+      border: none;
+      color: var(--popup-text-muted);
+      cursor: pointer;
+      padding: 0;
+      font-size: 14px;
+      line-height: 1;
+      margin-left: 2px;
+    }
+
+    .custom-color-item .delete-color:hover {
+      color: var(--popup-danger-color);
+    }
+
+    .add-color-form {
+      margin-top: 8px;
+      padding: 10px;
+      background: var(--popup-bg-hover);
+      border-radius: 6px;
+    }
+
+    .add-color-form.hidden {
+      display: none;
+    }
+
+    .add-color-form input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid var(--popup-border-light);
+      border-radius: 4px;
+      background: var(--popup-bg-tertiary);
+      color: var(--popup-text-primary);
+      font-size: 12px;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+
+    .add-color-form input:focus {
+      outline: none;
+      border-color: var(--popup-accent-color);
+    }
+
+    .add-color-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-save-color, .btn-cancel-color {
+      flex: 1;
+      padding: 6px;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-save-color {
+      background: var(--popup-accent-color);
+      color: var(--popup-bg-primary);
+    }
+
+    .btn-save-color:hover {
+      filter: brightness(1.1);
+    }
+
+    .btn-cancel-color {
+      background: var(--popup-border-light);
+      color: var(--popup-text-secondary);
+    }
+
+    .btn-cancel-color:hover {
+      background: var(--popup-text-muted);
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--popup-border-light);
+      margin: 16px 0;
+    }
+
+    .empty-colors {
+      font-size: 11px;
+      color: var(--popup-text-dim);
+      font-style: italic;
+    }
+
+    /* Preset section */
+    .preset-section {
+      margin-top: 8px;
+    }
+
+    .preset-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 20px;
+    }
+
+    .preset-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--popup-bg-hover);
+      border: 1px solid var(--popup-border-light);
+      border-radius: 6px;
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .preset-item:hover {
+      background: var(--popup-bg-tertiary);
+      border-color: var(--popup-accent-color);
+    }
+
+    .preset-item .preset-name {
+      font-size: 12px;
+      color: var(--popup-text-primary);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .preset-item .preset-tone {
+      font-size: 10px;
+      color: var(--popup-text-muted);
+      margin-left: 8px;
+    }
+
+    .preset-item .delete-preset {
+      background: none;
+      border: none;
+      color: var(--popup-text-muted);
+      cursor: pointer;
+      padding: 0 0 0 8px;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .preset-item .delete-preset:hover {
+      color: var(--popup-danger-color);
+    }
+
+    .empty-presets {
+      font-size: 11px;
+      color: var(--popup-text-dim);
+      font-style: italic;
+      padding: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="popup-header">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+    </svg>
+    <h1>FolderLM</h1>
+    <button class="header-icon-btn" id="btn-open-sidepanel" title="Open in side panel">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="9" y1="3" x2="9" y2="21"></line>
+      </svg>
+    </button>
+  </div>
+
+  <div class="popup-content">
+    <div id="message" class="message hidden"></div>
+
+    <div class="stats-section">
+      <div class="stats-header">
+        <h2>Stats</h2>
+        <button class="refresh-btn" id="btn-refresh-stats" title="Refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value" id="stat-notebooks">-</div>
+          <div class="stat-label">Notebooks</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-groups">-</div>
+          <div class="stat-label">Groups</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-favorites">-</div>
+          <div class="stat-label">Favorites</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-assigned">-</div>
+          <div class="stat-label">Assigned</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions-section">
+      <button class="action-btn" id="btn-slide-prompt">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        Slide Prompt Builder
+      </button>
+
+      <button class="action-btn" id="btn-export">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Export data
+      </button>
+
+      <button class="action-btn" id="btn-import">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        Import data
+      </button>
+
+      <input type="file" id="import-file" accept=".json" class="hidden">
+
+      <button class="action-btn" id="btn-open-notebooklm">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+        Open NotebookLM
+      </button>
+
+      <button class="action-btn danger" id="btn-reset">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+        Reset all data
+      </button>
+    </div>
+  </div>
+
+  <div class="popup-footer">
+    <p>FolderLM</p>
+  </div>
+
+  <!-- Slide prompt modal -->
+  <div id="slide-prompt-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Slide Prompt Builder</h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- 1) Tone selection -->
+        <div class="form-group tone-section">
+          <label>1. Choose a slide tone</label>
+          <select id="slide-tone">
+            <option value="simple">Simple & Minimal</option>
+            <option value="business">Business & Professional</option>
+            <option value="modern">Modern & Stylish</option>
+            <option value="pop">Pop & Casual</option>
+            <option value="elegant">Elegant & Premium</option>
+            <option value="tech">Tech & Futuristic</option>
+            <option value="natural">Natural & Soft</option>
+            <option value="dynamic">Dynamic & Impactful</option>
+            <option value="creative">Creative & Unique</option>
+            <option value="academic">Academic & Formal</option>
+          </select>
+          <p class="tone-description" id="tone-description"></p>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Custom colors -->
+        <div class="custom-colors-section">
+          <div class="section-header">
+            <span>Saved custom colors</span>
+            <button class="add-color-btn" id="btn-add-color">+ Add</button>
+          </div>
+          <div id="custom-colors-list" class="custom-colors-list"></div>
+          <div id="add-color-form" class="add-color-form hidden">
+            <input type="text" id="new-color-name" placeholder="Name (e.g., Corporate Blue)">
+            <input type="text" id="new-color-code" placeholder="#000000">
+            <div class="add-color-actions">
+              <button class="btn-save-color" id="btn-save-color">Save</button>
+              <button class="btn-cancel-color" id="btn-cancel-color">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <p class="section-label">2. Customize colors and fonts (optional)</p>
+
+        <div class="form-group">
+          <label>Primary color</label>
+          <div class="color-select-row">
+            <select id="main-color">
+              <optgroup label="Dark">
+                <option value="#1d1d1f">Black (#1d1d1f)</option>
+                <option value="#202124">Dark Gray (#202124)</option>
+                <option value="#1d1c1d">Off Black (#1d1c1d)</option>
+                <option value="#2c2c2c">Charcoal (#2c2c2c)</option>
+                <option value="#323130">Gray (#323130)</option>
+                <option value="#161616">Jet Black (#161616)</option>
+              </optgroup>
+              <optgroup label="Blue/Green">
+                <option value="#1e3a5f">Navy (#1e3a5f)</option>
+                <option value="#3d5a45">Forest Green (#3d5a45)</option>
+              </optgroup>
+              <optgroup label="Accent">
+                <option value="#611f69">Deep Purple (#611f69)</option>
+              </optgroup>
+              <option value="custom">Custom...</option>
+            </select>
+            <input type="text" id="main-color-custom" class="color-input hidden" placeholder="#000000">
+            <div id="main-color-preview" class="color-preview"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Accent color</label>
+          <div class="color-select-row">
+            <select id="accent-color">
+              <optgroup label="Blues">
+                <option value="#0071e3">Blue (#0071e3)</option>
+                <option value="#0078d4">Royal Blue (#0078d4)</option>
+                <option value="#1a73e8">Sky Blue (#1a73e8)</option>
+                <option value="#0f62fe">Deep Blue (#0f62fe)</option>
+                <option value="#36c5f0">Light Blue (#36c5f0)</option>
+              </optgroup>
+              <optgroup label="Warm">
+                <option value="#fa0f00">Red (#fa0f00)</option>
+                <option value="#e01e5a">Pink (#e01e5a)</option>
+                <option value="#b8860b">Dark Gold (#b8860b)</option>
+                <option value="#8b4513">Saddle Brown (#8b4513)</option>
+              </optgroup>
+              <optgroup label="Greens">
+                <option value="#a8c686">Sage Green (#a8c686)</option>
+              </optgroup>
+              <option value="custom">Custom...</option>
+            </select>
+            <input type="text" id="accent-color-custom" class="color-input hidden" placeholder="#000000">
+            <div id="accent-color-preview" class="color-preview"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Background color</label>
+          <div class="color-select-row">
+            <select id="bg-color">
+              <optgroup label="Whites">
+                <option value="#ffffff">White (#ffffff)</option>
+                <option value="#f4f4f4">Light Gray (#f4f4f4)</option>
+                <option value="#fafaf5">Natural White (#fafaf5)</option>
+              </optgroup>
+              <optgroup label="Creams">
+                <option value="#fffef5">Ivory (#fffef5)</option>
+                <option value="#fffef8">Cream (#fffef8)</option>
+              </optgroup>
+              <optgroup label="Darks">
+                <option value="#1a1a1a">Dark (#1a1a1a)</option>
+                <option value="#0d1117">Dark Blue (#0d1117)</option>
+              </optgroup>
+              <option value="custom">Custom...</option>
+            </select>
+            <input type="text" id="bg-color-custom" class="color-input hidden" placeholder="#000000">
+            <div id="bg-color-preview" class="color-preview"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Japanese font</label>
+          <select id="jp-font">
+            <optgroup label="Gothic (Readable)">
+              <option value="Hiragino Sans">Hiragino Sans</option>
+              <option value="Yu Gothic">Yu Gothic</option>
+              <option value="Meiryo">Meiryo</option>
+              <option value="Noto Sans JP">Noto Sans JP</option>
+              <option value="Source Han Sans JP">Source Han Sans JP</option>
+              <option value="IBM Plex Sans JP">IBM Plex Sans JP</option>
+              <option value="BIZ UDPGothic">BIZ UDPGothic</option>
+            </optgroup>
+            <optgroup label="Mincho (Formal)">
+              <option value="Yu Mincho">Yu Mincho</option>
+              <option value="Hiragino Mincho">Hiragino Mincho</option>
+              <option value="Noto Serif JP">Noto Serif JP</option>
+              <option value="Source Han Serif JP">Source Han Serif JP</option>
+              <option value="BIZ UDPMincho">BIZ UDPMincho</option>
+            </optgroup>
+            <optgroup label="Rounded (Soft)">
+              <option value="M PLUS Rounded 1c">M PLUS Rounded 1c</option>
+              <option value="Zen Maru Gothic">Zen Maru Gothic</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>English font</label>
+          <select id="en-font">
+            <optgroup label="Sans Serif (Modern)">
+              <option value="Helvetica Neue">Helvetica Neue</option>
+              <option value="Segoe UI">Segoe UI</option>
+              <option value="Roboto">Roboto</option>
+              <option value="IBM Plex Sans">IBM Plex Sans</option>
+              <option value="Source Sans Pro">Source Sans Pro</option>
+              <option value="Lato">Lato</option>
+              <option value="Poppins">Poppins</option>
+              <option value="Open Sans">Open Sans</option>
+              <option value="Arial">Arial</option>
+            </optgroup>
+            <optgroup label="Serif (Formal)">
+              <option value="EB Garamond">EB Garamond</option>
+              <option value="Cormorant Garamond">Cormorant Garamond</option>
+              <option value="Source Serif Pro">Source Serif Pro</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Times New Roman">Times New Roman</option>
+            </optgroup>
+            <optgroup label="Display">
+              <option value="Montserrat">Montserrat</option>
+              <option value="Playfair Display">Playfair Display</option>
+              <option value="Oswald">Oswald</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Generated prompt (editable)</label>
+          <textarea id="generated-prompt" rows="12"></textarea>
+          <button class="copy-btn" id="btn-copy-prompt">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy
+          </button>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Preset save/load -->
+        <div class="preset-section">
+          <div class="section-header">
+            <span>Saved presets</span>
+            <button class="add-color-btn" id="btn-save-preset">+ Save</button>
+          </div>
+          <div id="preset-list" class="preset-list"></div>
+          <div id="save-preset-form" class="add-color-form hidden">
+            <input type="text" id="new-preset-name" placeholder="Preset name (e.g., Internal deck)">
+            <div class="add-color-actions">
+              <button class="btn-save-color" id="btn-confirm-save-preset">Save</button>
+              <button class="btn-cancel-color" id="btn-cancel-save-preset">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
