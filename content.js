@@ -48,7 +48,7 @@
     favorites: [],
     assignments: {}, // notebookId -> groupId
     expandedGroups: {},
-    sidebarWidth: 248,
+    sidebarWidth: 200,
     searchQuery: '',
     mainFilterGroupId: 'all',
     viewMode: 'custom', // folder-only mode
@@ -109,7 +109,7 @@
         favorites: [],
         assignments: savedState.assignments || {},
         expandedGroups: savedState.expandedGroups || {},
-        sidebarWidth: savedState.sidebarWidth || 248,
+        sidebarWidth: savedState.sidebarWidth || 200,
         viewMode: 'custom',
         theme: 'auto',
         mainFilterGroupId: savedState.mainFilterGroupId || 'all',
@@ -329,13 +329,16 @@
         const titleEl = row.querySelector('.project-table-title');
         let title = '';
         if (titleEl) {
-
-          title = titleEl.textContent.trim();
+          // Clone and remove injected labels so their text doesn't pollute the title
+          const clone = titleEl.cloneNode(true);
+          clone.querySelectorAll('.flm-group-label').forEach(el => el.remove());
+          title = clone.textContent.trim();
         } else {
-
           const firstCell = row.querySelector('td');
           if (firstCell) {
-            title = firstCell.textContent.trim();
+            const clone = firstCell.cloneNode(true);
+            clone.querySelectorAll('.flm-group-label').forEach(el => el.remove());
+            title = clone.textContent.trim();
           }
         }
         
@@ -409,7 +412,17 @@
         
         clickableRows.forEach((el, index) => {
           const titleEl = el.querySelector('.project-table-title, [class*="title"]');
-          let title = titleEl ? titleEl.textContent.trim() : el.textContent.trim().slice(0, 50);
+          let title = '';
+          if (titleEl) {
+            const clone = titleEl.cloneNode(true);
+            clone.querySelectorAll('.flm-group-label').forEach(n => n.remove());
+            title = clone.textContent.trim();
+          }
+          if (!title) {
+            const clone = el.cloneNode(true);
+            clone.querySelectorAll('.flm-group-label').forEach(n => n.remove());
+            title = clone.textContent.trim().slice(0, 50);
+          }
           
           if (!title || title.includes('Title')) return; // Skip header rows
           
@@ -448,11 +461,17 @@
         if (!titleEl) {
           titleEl = card.querySelector('h2, h3, h4');
         }
-        let title = titleEl ? titleEl.textContent.trim() : '';
-        
+        let title = '';
+        if (titleEl) {
+          const clone = titleEl.cloneNode(true);
+          clone.querySelectorAll('.flm-group-label').forEach(el => el.remove());
+          title = clone.textContent.trim();
+        }
 
         if (!title) {
-          const textContent = card.textContent.trim();
+          const clone = card.cloneNode(true);
+          clone.querySelectorAll('.flm-group-label').forEach(el => el.remove());
+          const textContent = clone.textContent.trim();
 
           const lines = textContent.split('\n').map(l => l.trim()).filter(l => l && !l.match(/^\d{4}\/\d{1,2}\/\d{1,2}/));
           title = lines[0] || `Notebook ${index + 1}`;
@@ -1207,13 +1226,13 @@
     const actionsHtml = type === 'custom' ? `
       <div class="flm-group-actions">
         <button class="flm-group-action-btn edit-group" title="Edit folder">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"></path>
             <path d="M14.06 6.19l3.75 3.75"></path>
           </svg>
         </button>
         <button class="flm-group-action-btn delete-group" title="Delete folder">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M3 6h18"></path>
             <path d="M8 6V4h8v2"></path>
             <path d="M19 6l-1 14H6L5 6"></path>
@@ -1397,6 +1416,7 @@
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/plain', dragState.notebookId);
         event.dataTransfer.setData('drag-type', 'notebook');
+        if (dragState.ghost) event.dataTransfer.setDragImage(dragState.ghost, 0, 0);
       });
 
       item.addEventListener('dragend', () => {
@@ -1428,6 +1448,7 @@
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/plain', dragState.groupId);
         event.dataTransfer.setData('drag-type', 'group');
+        if (dragState.ghost) event.dataTransfer.setDragImage(dragState.ghost, 0, 0);
       });
 
       header.addEventListener('dragend', () => {
@@ -1561,6 +1582,7 @@
         dragGhost.textContent = notebook.title;
         dragGhost.id = 'flm-main-drag-ghost';
         document.body.appendChild(dragGhost);
+        e.dataTransfer.setDragImage(dragGhost, 0, 0);
       });
 
       card.addEventListener('dragend', () => {
@@ -1619,6 +1641,8 @@
   }
 
   function removeTopCategoryButtons() {
+    const wrapper = document.getElementById('flm-top-buttons-row');
+    if (wrapper) wrapper.remove();
     const newBtn = document.getElementById('flm-top-new-category-btn');
     if (newBtn) newBtn.remove();
     const manageBtn = document.getElementById('flm-top-manage-category-btn');
@@ -1626,39 +1650,8 @@
   }
 
   function renderTopNewCategoryButton() {
-    const controlsRow = document.querySelector('.project-filter-create-container');
-    if (!controlsRow || window.location.pathname.includes('/notebook/')) {
-      removeTopCategoryButtons();
-      return;
-    }
-
-    let manageBtn = document.getElementById('flm-top-manage-category-btn');
-    if (!manageBtn) {
-      manageBtn = document.createElement('button');
-      manageBtn.id = 'flm-top-manage-category-btn';
-      manageBtn.type = 'button';
-      manageBtn.textContent = 'Manage folders';
-      manageBtn.addEventListener('click', () => showManageFoldersModal());
-    }
-
-    let btn = document.getElementById('flm-top-new-category-btn');
-    if (!btn) {
-      btn = document.createElement('button');
-      btn.id = 'flm-top-new-category-btn';
-      btn.type = 'button';
-      btn.innerHTML = `
-        <span class="flm-top-new-category-plus">+</span>
-        New folder
-      `;
-      btn.addEventListener('click', () => showCreateGroupModal());
-    }
-
-    if (manageBtn.parentElement !== controlsRow) {
-      controlsRow.appendChild(manageBtn);
-    }
-    if (btn.parentElement !== controlsRow) {
-      controlsRow.appendChild(btn);
-    }
+    // Buttons are now rendered inside the category bar's filter row.
+    // This function is kept as a no-op; the buttons are built in renderMainCategoryBar().
   }
 
   function getMainFilterMountPoint() {
@@ -1824,8 +1817,9 @@
 
     container.innerHTML = `
       <div class="flm-main-filter-row">
-        <div class="flm-main-filter-title">Folders</div>
-        <div class="flm-main-filter-list" role="tablist" aria-label="Folders">
+        <div class="flm-main-filter-left">
+          <div class="flm-main-filter-title">Folders</div>
+          <div class="flm-main-filter-list" role="tablist" aria-label="Folders">
           <div class="category-pill flm-main-filter-btn ${activeFilter === 'all' ? 'active' : ''}"
                data-filter-group="all"
                style="--flm-pill-badge-bg:var(--flm-cat-badge-bg);"
@@ -1840,6 +1834,14 @@
             </button>
           </div>
           ${groupsHtml}
+          </div>
+        </div>
+        <div class="flm-main-filter-actions">
+          <button id="flm-top-manage-category-btn" type="button">Manage folders</button>
+          <button id="flm-top-new-category-btn" type="button">
+            <span class="flm-top-new-category-plus">+</span>
+            New folder
+          </button>
         </div>
       </div>
     `;
@@ -1861,6 +1863,11 @@
     }
 
     container.addEventListener('click', (e) => {
+      const manageBtn = e.target.closest('#flm-top-manage-category-btn');
+      if (manageBtn) { showManageFoldersModal(); return; }
+      const newFolderBtn = e.target.closest('#flm-top-new-category-btn');
+      if (newFolderBtn) { showCreateGroupModal(); return; }
+
       const moreBtn = e.target.closest('.flm-main-filter-toggle');
       if (moreBtn && container.contains(moreBtn)) {
         e.preventDefault();
@@ -2648,7 +2655,16 @@
 
     state.notebooks.forEach(notebook => {
       if (!notebook.element) return;
+
+      // If element is detached from DOM, skip — detectNotebooks will reassign
+      if (!notebook.element.isConnected) return;
+
       let label = notebook.element.querySelector('.flm-group-label');
+      // Also check inside the title element for inline labels
+      if (!label) {
+        const titleEl = notebook.element.querySelector('.project-table-title');
+        if (titleEl) label = titleEl.querySelector('.flm-group-label');
+      }
 
       if (notebook.manageable === false) {
         if (label) label.remove();
@@ -2658,19 +2674,32 @@
       const assignedGroupId = state.assignments[notebook.id];
       const group = state.groups.find(g => g.id === assignedGroupId);
 
+      const isListRow = notebook.element.matches('tr, tr *') || notebook.element.closest('tr') !== null;
+      const titleEl = isListRow ? notebook.element.querySelector('.project-table-title') : null;
+      const needsInline = isListRow && titleEl;
+
+      // If label exists but is in the wrong mode (inline vs absolute), recreate it
+      if (label) {
+        const isInline = label.classList.contains('flm-group-label-inline');
+        if (needsInline !== isInline) {
+          label.remove();
+          label = null;
+        }
+      }
+
       if (!label) {
         label = document.createElement('div');
         label.className = 'flm-group-label';
-        const pos = window.getComputedStyle(notebook.element).position;
-        if (!pos || pos === 'static') {
-          notebook.element.style.position = 'relative';
+        if (needsInline) {
+          label.classList.add('flm-group-label-inline');
+          titleEl.appendChild(label);
+        } else {
+          const pos = window.getComputedStyle(notebook.element).position;
+          if (!pos || pos === 'static') {
+            notebook.element.style.position = 'relative';
+          }
+          notebook.element.appendChild(label);
         }
-        notebook.element.appendChild(label);
-      } else if (label.tagName === 'BUTTON') {
-        const replacement = document.createElement('div');
-        replacement.className = 'flm-group-label';
-        label.replaceWith(replacement);
-        label = replacement;
       }
 
       if (group) {
@@ -2790,7 +2819,7 @@
 
 
     let updateTimeout = null;
-    const DEBOUNCE_DELAY = 2500;
+    const DEBOUNCE_DELAY = 800;
 
 
     if (domObserver) {
@@ -3026,7 +3055,7 @@
       state.favorites = [];
       state.assignments = newValue.assignments || {};
       state.expandedGroups = newValue.expandedGroups || {};
-      state.sidebarWidth = newValue.sidebarWidth || 248;
+      state.sidebarWidth = newValue.sidebarWidth || 200;
       state.viewMode = 'custom';
       state.theme = 'auto';
       state.mainFilterGroupId = newValue.mainFilterGroupId || 'all';

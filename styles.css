@@ -4,7 +4,7 @@
 
 /* Global font token for all injected extension UI */
 :root {
-  --flm-font-sans: "Google Sans Text", "Google Sans", "Product Sans", "Segoe UI", Roboto, Arial, sans-serif;
+  --flm-font-sans: "Google Sans Text", "Google Sans", "Product Sans", "Noto Sans SC", "Noto Sans TC", "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 /* Enforce extension font on injected UI nodes (outside and inside sidebar) */
@@ -12,10 +12,8 @@
 #flm-sidebar *,
 #flm-main-category-bar,
 #flm-main-category-bar *,
-#flm-top-new-category-btn,
-#flm-top-new-category-btn *,
-#flm-top-manage-category-btn,
-#flm-top-manage-category-btn *,
+.flm-main-filter-actions,
+.flm-main-filter-actions *,
 .flm-modal-overlay,
 .flm-modal-overlay *,
 .flm-notebook-folder-menu,
@@ -358,10 +356,10 @@
 }
 
 .flm-group-action-btn {
-  width: 22px;
-  height: 22px;
-  border: 1px solid #c7ccd2;
-  background: #ffffff;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
   color: #6b7178;
   border-radius: 6px;
   cursor: pointer;
@@ -372,9 +370,9 @@
 }
 
 .flm-group-action-btn:hover {
-  background: #f7f9fb;
-  border-color: #111111;
+  background: rgba(0, 0, 0, 0.06);
   color: #111111;
+  border-radius: 6px;
 }
 
 /* Group content (notebook list) */
@@ -730,16 +728,21 @@ body.flm-organizer-active {
 }
 
 .flm-drag-ghost {
-  position: fixed;
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
   pointer-events: none;
-  z-index: 10002;
-  background: var(--flm-bg-hover, #333);
-  padding: 8px 16px;
+  z-index: -1;
+  background: #ffffff;
+  padding: 6px 12px;
   border-radius: 8px;
-  color: var(--flm-text-primary, #e0e0e0);
-  font-size: 14px;
-  box-shadow: 0 4px 12px var(--flm-shadow-strong, rgba(0, 0, 0, 0.4));
+  color: #1a1a1a;
+  border: 1px solid #e0e0e0;
+  font-size: 13px;
+  white-space: nowrap;
   max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -808,9 +811,24 @@ body.flm-organizer-active {
 
 .flm-main-filter-row {
   display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.flm-main-filter-left {
+  display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
+  min-width: 0;
+}
+
+.flm-main-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .flm-main-filter-title {
@@ -1069,7 +1087,6 @@ body.flm-organizer-active {
   font-weight: 450;
   line-height: 1;
   white-space: nowrap;
-  margin-left: 8px;
   transition: border-color 0.16s ease, background 0.16s ease, border-radius 0.16s ease;
   font-family: var(--flm-font-sans);
 }
@@ -1095,7 +1112,6 @@ body.flm-organizer-active {
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
-  margin-left: 8px;
   transition: border-color 0.16s ease, background 0.16s ease, border-radius 0.16s ease;
   font-family: var(--flm-font-sans);
 }
@@ -1163,14 +1179,12 @@ body.flm-organizer-active {
     min-height: 36px;
     padding: 0 8px;
     font-size: 14px;
-    margin-left: 8px;
   }
 
   #flm-top-manage-category-btn {
     min-height: 36px;
     padding: 0 8px;
     font-size: 14px;
-    margin-left: 8px;
   }
 
   .flm-top-new-category-plus {
@@ -1246,6 +1260,25 @@ body.flm-organizer-active {
 .flm-group-label:hover {
   filter: brightness(1.06);
   opacity: 1;
+}
+
+/* Inline variant for list/table view — sits after the title */
+.flm-group-label.flm-group-label-inline {
+  position: static;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 8px;
+}
+
+/* Ensure the title cell doesn't clip the inline label */
+td:has(.flm-group-label-inline) {
+  overflow: visible !important;
+}
+
+.project-table-title:has(.flm-group-label-inline) {
+  overflow: visible !important;
+  text-overflow: unset !important;
+  white-space: nowrap !important;
 }
 
 .flm-group-label::after {
