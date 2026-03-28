@@ -739,6 +739,7 @@ body.flm-organizer-active {
   color: #1a1a1a;
   border: 1px solid #e0e0e0;
   font-size: 13px;
+  font-family: var(--flm-font-sans);
   white-space: nowrap;
   max-width: 200px;
   overflow: hidden;
